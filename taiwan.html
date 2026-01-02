@@ -2,1520 +2,596 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Taiwan Trip - Interactive Itinerary</title>
-  <meta name="description" content="Interactive Taiwan travel itinerary (Taichung + Taipei) with a cute scrapbook." />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Taiwan Travel Planner</title>
+  <meta name="description" content="Single page Taiwan travel itinerary with CSV import/export and offline storage." />
   <style>
     :root {
-      --bg1: #a8e7ff;
-      --bg2: #fff3bf;
-      --ink: #0b1b2a;
-      --muted: rgba(11,27,42,.65);
-      --card: rgba(255,255,255,.78);
-      --card2: rgba(255,255,255,.62);
-      --stroke: rgba(11,27,42,.12);
-      --shadow: 0 16px 45px rgba(11,27,42,.18);
-      --shadow2: 0 10px 25px rgba(11,27,42,.12);
+      --bg: #f6fbff;
+      --accent: #5c8dff;
+      --accent2: #ff94b8;
+      --ink: #0f1a2b;
+      --muted: #5b6b7b;
+      --card: #ffffffcc;
       --radius: 18px;
-      --radius2: 24px;
-      --focus: 0 0 0 4px rgba(40, 130, 255, .25);
+      --shadow: 0 12px 30px rgba(15, 26, 43, 0.12);
     }
 
     * { box-sizing: border-box; }
-    html, body { height: 100%; }
     body {
       margin: 0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(1200px 700px at 20% -10%, #d7ecff80, transparent 45%),
+                  radial-gradient(900px 600px at 90% -10%, #ffdfe980, transparent 45%),
+                  linear-gradient(180deg, #f9fdff, #fef5ff);
       color: var(--ink);
-      background:
-        radial-gradient(1200px 650px at 10% 0%, rgba(255,255,255,.65), transparent 60%),
-        radial-gradient(900px 700px at 90% 0%, rgba(255,255,255,.45), transparent 55%),
-        linear-gradient(180deg, var(--bg1), var(--bg2));
-      overflow-x: hidden;
+      min-height: 100vh;
     }
 
-    /* Cute floating stuff */
-    .sky { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-    .cloud {
-      position: absolute;
-      width: 180px; height: 70px;
-      background: rgba(255,255,255,.7);
-      border-radius: 999px;
-      filter: blur(.2px);
-      box-shadow: 0 12px 30px rgba(11,27,42,.08);
-      animation: drift linear infinite;
-    }
-    .cloud:before, .cloud:after {
-      content: "";
-      position: absolute;
-      background: rgba(255,255,255,.74);
-      border-radius: 999px;
-    }
-    .cloud:before { width: 90px; height: 90px; left: 18px; top: -36px; }
-    .cloud:after { width: 120px; height: 120px; left: 70px; top: -58px; }
-    @keyframes drift {
-      from { transform: translateX(-220px); }
-      to   { transform: translateX(calc(100vw + 240px)); }
-    }
-
-    .sparkles {
-      position: absolute; inset: 0;
-      background-image:
-        radial-gradient(circle at 15% 20%, rgba(255,255,255,.75) 0 1px, transparent 2px),
-        radial-gradient(circle at 55% 25%, rgba(255,255,255,.55) 0 1px, transparent 2px),
-        radial-gradient(circle at 75% 35%, rgba(255,255,255,.6) 0 1px, transparent 2px),
-        radial-gradient(circle at 20% 70%, rgba(255,255,255,.55) 0 1px, transparent 2px),
-        radial-gradient(circle at 85% 80%, rgba(255,255,255,.6) 0 1px, transparent 2px);
-      opacity: .7;
-      animation: twinkle 5s ease-in-out infinite;
-    }
-    @keyframes twinkle {
-      0%,100% { opacity: .55; }
-      50% { opacity: .9; }
-    }
-
-    .app {
-      position: relative;
-      z-index: 1;
-      max-width: 1250px;
-      margin: 0 auto;
-      padding: 22px 18px 26px;
-    }
+    .app { max-width: 1100px; margin: 0 auto; padding: 18px 14px 32px; }
 
     header {
+      background: var(--card);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 14px 16px;
       display: grid;
       grid-template-columns: 1fr auto;
-      gap: 14px;
+      gap: 12px;
       align-items: center;
-      background: var(--card);
-      border: 1px solid var(--stroke);
-      border-radius: var(--radius2);
-      padding: 16px 16px;
-      box-shadow: var(--shadow2);
-      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 10px;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(15,26,43,0.08);
     }
-    .title { display: flex; flex-direction: column; gap: 4px; }
-    .title h1 {
-      margin: 0;
-      font-size: clamp(18px, 2.4vw, 28px);
-      letter-spacing: -0.02em;
-    }
-    .title .sub {
-      color: var(--muted);
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      font-size: 13px;
-    }
-    .chip {
-      display: inline-flex;
-      gap: 8px;
-      align-items: center;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--stroke);
-      background: rgba(255,255,255,.68);
-      box-shadow: 0 6px 15px rgba(11,27,42,.08);
-      font-size: 12px;
-    }
-    .chip b { color: var(--ink); font-weight: 700; }
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: flex-end;
-      align-items: center;
-    }
-    button, .btn {
+    @media (max-width: 780px) { header { grid-template-columns: 1fr; position: static; } }
+
+    h1 { margin: 0; font-size: clamp(20px, 4vw, 28px); letter-spacing: -0.01em; }
+    .sub { color: var(--muted); font-size: 13px; margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    button, .chip {
       appearance: none;
-      border: 1px solid var(--stroke);
-      background: rgba(255,255,255,.72);
-      color: var(--ink);
-      border-radius: 14px;
+      border: 1px solid rgba(15,26,43,0.12);
+      background: #fff;
+      border-radius: 999px;
       padding: 10px 12px;
-      font-weight: 650;
+      font-weight: 700;
       font-size: 13px;
       cursor: pointer;
-      box-shadow: 0 10px 22px rgba(11,27,42,.10);
-      transition: transform .08s ease, box-shadow .2s ease, background .2s ease;
-      user-select: none;
-    }
-    button:hover { transform: translateY(-1px); box-shadow: var(--shadow2); background: rgba(255,255,255,.9); }
-    button:active { transform: translateY(0px) scale(.99); }
-    button:focus-visible { outline: none; box-shadow: var(--shadow2), var(--focus); }
-    .btn-primary { background: rgba(0,163,255,.14); border-color: rgba(0,163,255,.28); }
-    .btn-pink { background: rgba(255,94,168,.14); border-color: rgba(255,94,168,.26); }
-    .btn-ghost { background: rgba(255,255,255,.55); }
-
-    nav {
-      margin-top: 14px;
-      background: var(--card);
-      border: 1px solid var(--stroke);
-      border-radius: var(--radius2);
-      padding: 10px 12px;
-      box-shadow: var(--shadow2);
-      backdrop-filter: blur(8px);
-    }
-    .daytabs {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    .tab {
-      display: inline-flex;
-      gap: 8px;
-      align-items: center;
-      padding: 8px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--stroke);
-      background: rgba(255,255,255,.62);
-      cursor: pointer;
-      transition: transform .08s ease, background .2s ease;
-      font-size: 12px;
-      user-select: none;
-    }
-    .tab:hover { transform: translateY(-1px); background: rgba(255,255,255,.85); }
-    .tab[aria-selected="true"] {
-      background: rgba(124,92,255,.14);
-      border-color: rgba(124,92,255,.28);
-      box-shadow: 0 10px 22px rgba(124,92,255,.10);
-      font-weight: 800;
-    }
-    .tab small { color: var(--muted); font-weight: 700; }
-
-    .layout {
-      margin-top: 14px;
-      display: grid;
-      grid-template-columns: 1.2fr .8fr;
-      gap: 14px;
-      align-items: start;
-    }
-    @media (max-width: 980px) {
-      .layout { grid-template-columns: 1fr; }
-      header { grid-template-columns: 1fr; }
-      .actions { justify-content: flex-start; }
-    }
-
-    .panel {
-      background: var(--card);
-      border: 1px solid var(--stroke);
-      border-radius: var(--radius2);
-      box-shadow: var(--shadow2);
-      backdrop-filter: blur(8px);
-      overflow: hidden;
-    }
-    .panel .hd {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 12px;
-      border-bottom: 1px dashed rgba(11,27,42,.14);
-      background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.50));
-    }
-    .panel .hd .left {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      min-width: 0;
-    }
-    .panel .hd h2 {
-      margin: 0;
-      font-size: 14px;
-      letter-spacing: -0.01em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .panel .hd .meta {
-      color: var(--muted);
-      font-size: 12px;
-      display: inline-flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .toolbar {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      padding: 12px 12px;
-      border-bottom: 1px solid rgba(11,27,42,.10);
-      background: rgba(255,255,255,.52);
-    }
-    .toolbar .search {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      background: rgba(255,255,255,.72);
-      border: 1px solid var(--stroke);
-      border-radius: 14px;
-      padding: 10px 12px;
-      box-shadow: 0 10px 20px rgba(11,27,42,.08);
-    }
-    .toolbar input[type="search"] {
-      width: 100%;
-      border: none;
-      outline: none;
-      background: transparent;
-      font-size: 13px;
+      box-shadow: 0 10px 18px rgba(15,26,43,0.08);
+      transition: transform .06s ease, box-shadow .2s ease, background .2s ease;
       color: var(--ink);
     }
-    .toolbar .filters {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      align-items: center;
-    }
-    .toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--stroke);
-      background: rgba(255,255,255,.62);
-      cursor: pointer;
-      user-select: none;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .toggle[aria-pressed="true"] {
-      background: rgba(33,193,107,.14);
-      border-color: rgba(33,193,107,.26);
-    }
+    button:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+    button:active { transform: translateY(0); }
+    .primary { background: linear-gradient(135deg, #6ab8ff, #ffb0d8); color: #0f1a2b; border: none; }
+    .ghost { background: rgba(255,255,255,0.72); }
 
-    .list {
-      padding: 12px;
-      display: grid;
-      gap: 10px;
-      max-height: calc(100vh - 280px);
-      overflow: auto;
-    }
-    @media (max-width: 980px) { .list { max-height: none; } }
+    .searchBox { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 14px; padding: 10px 12px; box-shadow: 0 8px 16px rgba(15,26,43,0.08); border: 1px solid rgba(15,26,43,0.08); }
+    .searchBox input { border: none; outline: none; flex: 1; font-size: 14px; background: transparent; }
 
-    .dayDivider {
-      margin-top: 6px;
-      margin-bottom: 2px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 12px;
-      border-radius: 16px;
-      background: rgba(255,255,255,.6);
-      border: 1px dashed rgba(11,27,42,.16);
-    }
-    .dayDivider .dtitle {
-      font-weight: 900;
-      letter-spacing: -0.01em;
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .dayDivider .dmeta {
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
+    nav { margin-top: 14px; overflow-x: auto; padding-bottom: 6px; }
+    .tabs { display: inline-flex; gap: 8px; }
+    .tab { padding: 9px 12px; border-radius: 12px; background: #fff; border: 1px solid rgba(15,26,43,0.1); font-weight: 800; cursor: pointer; white-space: nowrap; }
+    .tab[aria-selected="true"] { background: linear-gradient(135deg, #e7f3ff, #ffe9f2); border-color: #6ab8ff; }
 
-    .item {
+    .filterRow { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill { padding: 8px 10px; border-radius: 12px; border: 1px solid rgba(15,26,43,0.12); background: #fff; cursor: pointer; font-weight: 700; }
+    .pill[aria-pressed="true"] { background: rgba(92,141,255,0.15); border-color: #5c8dff; }
+
+    .cards { margin-top: 12px; display: grid; gap: 10px; }
+    .card {
+      position: relative;
+      padding: 14px 14px 12px 18px;
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.82);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(15,26,43,0.08);
       display: grid;
       grid-template-columns: auto 1fr auto;
-      gap: 10px;
+      gap: 12px;
       align-items: start;
-      border-radius: 18px;
-      border: 1px solid var(--stroke);
-      background: rgba(255,255,255,.72);
-      box-shadow: 0 10px 22px rgba(11,27,42,.10);
-      padding: 10px 10px;
-      position: relative;
-      overflow: hidden;
     }
-    .item:before {
-      content: "";
-      position: absolute;
-      left: 0; top: 0; bottom: 0;
-      width: 6px;
-      background: linear-gradient(180deg, rgba(0,163,255,.65), rgba(255,94,168,.55));
-      opacity: .85;
-    }
-    .item .tick {
-      display: inline-flex;
-      flex-direction: column;
-      gap: 8px;
-      align-items: center;
-      justify-content: flex-start;
-      padding-left: 6px;
-    }
-    .cb {
-      width: 18px; height: 18px;
-      accent-color: #20c16b;
-      cursor: pointer;
-      margin-top: 4px;
-    }
-    .time {
-      font-weight: 900;
-      font-size: 12px;
-      color: rgba(11,27,42,.82);
-      padding: 4px 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(11,27,42,.12);
-      background: rgba(255,255,255,.6);
-      white-space: nowrap;
-    }
-    .main { min-width: 0; }
-    .place {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-      line-height: 1.2;
-    }
-    .place b {
-      font-size: 14px;
-      letter-spacing: -0.01em;
-    }
-    .icon {
-      font-size: 18px;
-      filter: drop-shadow(0 8px 12px rgba(11,27,42,.12));
-    }
-    .subline {
-      margin-top: 6px;
-      color: var(--muted);
-      font-size: 12px;
-      display: grid;
-      gap: 4px;
-    }
-    .subline .row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .tag {
-      display: inline-flex;
-      gap: 6px;
-      align-items: center;
-      padding: 4px 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(11,27,42,.12);
-      background: rgba(255,255,255,.62);
-      font-size: 12px;
-      color: rgba(11,27,42,.78);
-      font-weight: 700;
-    }
-    .doodles {
-      font-size: 18px;
-      letter-spacing: 1px;
-      opacity: .95;
-      user-select: none;
-    }
-    .item .right {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      align-items: flex-end;
-    }
-    .mini {
-      padding: 8px 10px;
-      border-radius: 14px;
-      font-size: 12px;
-      font-weight: 800;
-      box-shadow: 0 10px 20px rgba(11,27,42,.10);
-    }
-    .mini.star[aria-pressed="true"] {
-      background: rgba(255,176,32,.18);
-      border-color: rgba(255,176,32,.32);
-    }
+    @media (max-width: 640px) { .card { grid-template-columns: 1fr; } }
 
-    .scrap { display: grid; grid-template-rows: auto auto 1fr auto; min-height: 620px; }
-    .scrap .top {
-      padding: 12px 12px 0;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .scrap .top .stat {
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 750;
-      display: inline-flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .stickerDrawer {
-      padding: 10px 12px;
-      display: grid;
-      gap: 10px;
-      border-bottom: 1px solid rgba(11,27,42,.10);
-    }
-    .drawerRow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-    .sticker {
-      width: 44px; height: 44px;
-      border-radius: 16px;
-      border: 1px dashed rgba(11,27,42,.18);
-      background: rgba(255,255,255,.65);
-      display: grid;
-      place-items: center;
-      font-size: 22px;
-      cursor: grab;
-      user-select: none;
-      box-shadow: 0 10px 18px rgba(11,27,42,.10);
-      transition: transform .08s ease;
-    }
-    .sticker:hover { transform: translateY(-1px) rotate(-2deg); }
-    .sticker:active { cursor: grabbing; transform: scale(.98); }
+    .timelineDot { width: 14px; height: 14px; border-radius: 50%; background: #5c8dff; box-shadow: 0 0 0 4px rgba(92,141,255,0.25); margin-top: 4px; position: relative; }
+    .timelineDot::after { content: ""; position: absolute; left: 50%; top: 14px; width: 2px; height: calc(100% + 18px); background: rgba(15,26,43,0.08); transform: translateX(-50%); }
+    .card:last-child .timelineDot::after { display: none; }
 
-    .canvasWrap { padding: 12px; display: grid; gap: 10px; }
-    .canvas {
-      position: relative;
-      height: 380px;
-      background:
-        radial-gradient(120px 60px at 20% 20%, rgba(255,255,255,.85), transparent 70%),
-        radial-gradient(160px 80px at 70% 35%, rgba(255,255,255,.75), transparent 70%),
-        linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.48));
-      border-radius: 22px;
-      border: 1px solid rgba(11,27,42,.14);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-      touch-action: none;
-    }
-    .paper {
-      position: absolute;
-      inset: 14px 14px 50px 14px;
-      background:
-        radial-gradient(400px 240px at 10% 0%, rgba(255,248,230,.95), rgba(255,253,248,.85) 55%, rgba(255,255,255,.72)),
-        repeating-linear-gradient(0deg, rgba(11,27,42,.04) 0 1px, transparent 1px 26px);
-      border-radius: 18px;
-      border: 1px solid rgba(11,27,42,.10);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.6);
-    }
-    .stamp {
-      position: absolute;
-      right: 20px;
-      top: 22px;
-      padding: 8px 10px;
-      border-radius: 16px;
-      border: 2px dashed rgba(255,94,168,.55);
-      background: rgba(255,94,168,.10);
-      transform: rotate(6deg);
-      font-weight: 900;
-      font-size: 12px;
-    }
-    .pin {
-      position: absolute;
-      left: 22px;
-      bottom: 18px;
-      display: inline-flex;
-      gap: 8px;
-      align-items: center;
-      padding: 8px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(11,27,42,.14);
-      background: rgba(255,255,255,.7);
-      font-size: 12px;
-      font-weight: 800;
-      box-shadow: 0 12px 22px rgba(11,27,42,.12);
-    }
-    .trash {
-      position: absolute;
-      right: 18px;
-      bottom: 12px;
-      display: inline-flex;
-      gap: 8px;
-      align-items: center;
-      padding: 10px 12px;
-      border-radius: 16px;
-      border: 1px solid rgba(11,27,42,.16);
-      background: rgba(255,255,255,.65);
-      box-shadow: 0 12px 22px rgba(11,27,42,.10);
-      font-weight: 900;
-      cursor: pointer;
-      user-select: none;
-    }
-    .trash[data-hot="true"] {
-      background: rgba(255,94,168,.16);
-      border-color: rgba(255,94,168,.28);
-    }
+    .card h3 { margin: 0; font-size: 16px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .timeTag { display: inline-flex; gap: 6px; align-items: center; padding: 6px 9px; border-radius: 10px; background: rgba(92,141,255,0.12); font-weight: 800; font-size: 13px; }
+    .addr { margin-top: 6px; word-break: break-word; }
+    .notes { margin-top: 6px; font-size: 13px; background: rgba(15,26,43,0.03); border-radius: 10px; padding: 8px 10px; }
+    .actionsRow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 
-    .stickerOnPaper {
-      position: absolute;
-      transform-origin: center;
-      font-size: 34px;
-      cursor: grab;
-      user-select: none;
-      filter: drop-shadow(0 14px 16px rgba(11,27,42,.18));
-      touch-action: none;
-    }
-    .stickerOnPaper:active { cursor: grabbing; }
+    .next { border-color: #ff94b8; box-shadow: 0 12px 26px rgba(255,148,184,0.32); }
 
-    .hint {
-      padding: 10px 12px 14px;
-      color: var(--muted);
-      font-size: 12px;
-      display: flex;
-      gap: 10px;
-      align-items: flex-start;
-    }
-    .hint .mascot {
-      width: 38px; height: 38px;
-      border-radius: 16px;
-      border: 1px solid rgba(11,27,42,.14);
-      background: rgba(255,255,255,.65);
-      box-shadow: 0 12px 22px rgba(11,27,42,.10);
-      display: grid;
-      place-items: center;
-      font-size: 20px;
-      flex: 0 0 auto;
-    }
+    .empty { text-align: center; padding: 18px; color: var(--muted); }
 
-    dialog {
-      border: 1px solid rgba(11,27,42,.18);
-      border-radius: 22px;
-      box-shadow: 0 30px 90px rgba(11,27,42,.28);
-      width: min(720px, calc(100vw - 28px));
-      background: rgba(255,255,255,.92);
-      backdrop-filter: blur(10px);
-    }
-    dialog::backdrop {
-      background: rgba(11,27,42,.28);
-      backdrop-filter: blur(3px);
-    }
-    .modal { padding: 14px 14px 14px; display: grid; gap: 10px; }
-    .modal h3 { margin: 0; font-size: 16px; letter-spacing: -0.01em; }
-    .modal .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    @media (max-width: 740px) { .modal .grid { grid-template-columns: 1fr; } }
+    dialog { border: none; border-radius: 20px; padding: 0; box-shadow: var(--shadow); max-width: 720px; width: min(95vw, 760px); }
+    dialog::backdrop { background: rgba(0,0,0,0.24); }
+    .modal { padding: 16px; background: #fff; border-radius: 20px; }
+    .modal h2 { margin: 0 0 10px; }
+    .field { display: grid; gap: 6px; margin-bottom: 12px; }
+    .field label { font-weight: 700; font-size: 13px; color: var(--muted); }
+    .field input, .field textarea, .field select { width: 100%; padding: 10px; border-radius: 12px; border: 1px solid rgba(15,26,43,0.12); font-size: 14px; }
+    textarea { min-height: 120px; }
+    .stepper { display: grid; gap: 10px; }
+    .mapGrid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+    .preview { background: rgba(15,26,43,0.03); padding: 10px; border-radius: 12px; font-size: 13px; }
+    .error { color: #b00020; font-weight: 700; font-size: 13px; }
 
-    .field {
-      display: grid;
-      gap: 6px;
-      padding: 10px 12px;
-      border-radius: 18px;
-      border: 1px solid rgba(11,27,42,.12);
-      background: rgba(255,255,255,.68);
-    }
-    .field label { font-size: 12px; color: var(--muted); font-weight: 800; }
-    .field .val { font-weight: 800; font-size: 13px; }
-    textarea {
-      width: 100%;
-      min-height: 90px;
-      resize: vertical;
-      border-radius: 14px;
-      border: 1px solid rgba(11,27,42,.14);
-      background: rgba(255,255,255,.78);
-      padding: 10px 10px;
-      font-family: inherit;
-      font-size: 13px;
-      outline: none;
-    }
-    textarea:focus-visible { box-shadow: var(--focus); }
-    .modal .foot {
-      display: flex;
-      gap: 10px;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .muted { color: var(--muted); font-size: 12px; font-weight: 700; }
-
-    .toast {
-      position: fixed;
-      left: 14px;
-      bottom: 14px;
-      z-index: 50;
-      display: grid;
-      gap: 8px;
-      pointer-events: none;
-    }
-    .toast .t {
-      pointer-events: auto;
-      background: rgba(255,255,255,.82);
-      border: 1px solid rgba(11,27,42,.12);
-      border-radius: 16px;
-      padding: 10px 12px;
-      box-shadow: 0 20px 60px rgba(11,27,42,.20);
-      font-size: 12px;
-      font-weight: 800;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      max-width: 340px;
-    }
-
-    .footer {
-      margin-top: 14px;
-      color: rgba(11,27,42,.62);
-      font-size: 12px;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 4px;
-    }
-
-    @media print {
-      body { background: white !important; }
-      .sky, .actions, nav, .scrap, .toast { display: none !important; }
-      header, .panel { box-shadow: none !important; background: white !important; }
-      .layout { grid-template-columns: 1fr !important; }
-      .list { max-height: none !important; overflow: visible !important; }
-      .item { break-inside: avoid; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .cloud, .sparkles { animation: none !important; }
-      button, .tab, .sticker { transition: none !important; }
-    }
+    footer { text-align: center; margin-top: 20px; color: var(--muted); font-size: 13px; }
   </style>
 </head>
 <body>
-  <div class="sky" aria-hidden="true">
-    <div class="sparkles"></div>
-    <div class="cloud" style="top: 70px; left: -240px; animation-duration: 44s; opacity:.9"></div>
-    <div class="cloud" style="top: 150px; left: -260px; animation-duration: 55s; opacity:.7; transform: scale(.9)"></div>
-    <div class="cloud" style="top: 260px; left: -300px; animation-duration: 62s; opacity:.65; transform: scale(.8)"></div>
-    <div class="cloud" style="top: 340px; left: -220px; animation-duration: 48s; opacity:.75; transform: scale(.7)"></div>
-  </div>
-
-  <div class="app" id="app">
+  <div class="app">
     <header>
-      <div class="title">
-        <h1><span aria-hidden="true">🇹🇼✨</span> <span id="tripTitle">Taiwan Trip Itinerary</span></h1>
-        <div class="sub">
-          <span class="chip"><span aria-hidden="true">🗓️</span> <b id="tripSubtitle">Feb 18–24, 2026</b></span>
-          <span class="chip"><span aria-hidden="true">🧋</span> Tap to open details • Drag stickers to the scrapbook</span>
-          <span class="chip" id="progressChip"><span aria-hidden="true">✅</span> <b>0%</b> done</span>
+      <div>
+        <h1>🇹🇼 Taiwan Travel Planner</h1>
+        <div class="sub">Simple, friendly, offline-ish. Paste or upload CSV from Google Sheets.</div>
+        <div class="searchBox" aria-label="Search">
+          <span aria-hidden="true">🔎</span>
+          <input id="search" type="search" placeholder="Search place or address" />
         </div>
       </div>
       <div class="actions">
-        <button class="btn btn-primary" id="btnAll" title="Show all days">🧭 All days</button>
-        <button class="btn btn-ghost" id="btnReset" title="Reset checkmarks, favorites, notes & stickers">🧼 Reset</button>
-        <button class="btn btn-ghost" id="btnHelp" title="How to use">❓ Help</button>
-        <button class="btn btn-pink" id="btnPrint" title="Print itinerary">🖨️ Print</button>
+        <button class="primary" id="btnImport">⬆️ Import</button>
+        <button class="ghost" id="btnExportCsv">⬇️ Export CSV</button>
+        <button class="ghost" id="btnExportJson">⬇️ Export JSON</button>
+        <button class="ghost" id="btnReset">🧼 Reset</button>
       </div>
     </header>
 
-    <nav aria-label="Choose a day">
-      <div class="daytabs" id="dayTabs"></div>
+    <nav aria-label="Days">
+      <div class="tabs" id="tabs"></div>
     </nav>
 
-    <div class="layout">
-      <section class="panel" aria-label="Itinerary">
-        <div class="hd">
-          <div class="left">
-            <h2 id="panelTitle">Today’s plan</h2>
-            <div class="meta" id="panelMeta"></div>
-          </div>
-          <div class="meta">
-            <span class="chip" id="chipCity"><span aria-hidden="true">📍</span> <b>Taichung</b> + Taipei</span>
-          </div>
-        </div>
-
-        <div class="toolbar">
-          <div class="search" role="search">
-            <span aria-hidden="true">🔎</span>
-            <input id="search" type="search" placeholder="Search place, activity, notes… (e.g., 'Jiufen', 'Night Market', 'HSR')" />
-          </div>
-          <div class="filters">
-            <button class="toggle" id="tNotes" aria-pressed="true" title="Show/hide notes">📝 Notes</button>
-            <button class="toggle" id="tAddr" aria-pressed="false" title="Show/hide addresses">📌 Address</button>
-            <button class="toggle" id="tSounds" aria-pressed="true" title="Toggle cute sounds">🔊 Sounds</button>
-            <button class="toggle" id="tKid" aria-pressed="true" title="Make everything extra cute (bigger stickers!)">🧸 Kid mode</button>
-          </div>
-        </div>
-
-        <div class="list" id="list"></div>
-      </section>
-
-      <aside class="panel scrap" aria-label="Scrapbook">
-        <div class="hd">
-          <div class="left">
-            <h2>Scrapbook</h2>
-            <div class="meta" id="scrapMeta"></div>
-          </div>
-          <div class="meta">
-            <button class="btn btn-ghost" id="btnShuffle" title="Shuffle stickers a bit (for fun)">🎲 Shuffle</button>
-          </div>
-        </div>
-
-        <div class="top">
-          <div class="stat" id="scrapStat">
-            <span class="chip"><span aria-hidden="true">📒</span> Drag stickers in • Double‑click to delete</span>
-          </div>
-          <div class="stat">
-            <span class="chip"><span aria-hidden="true">🧽</span> Drop on 🗑️ to delete</span>
-          </div>
-        </div>
-
-        <div class="stickerDrawer" id="drawer">
-          <div class="drawerRow" aria-label="Stickers: landmarks & vibes">
-            <div class="sticker" draggable="true" data-emoji="🗼" title="Skyscraper / Taipei 101">🗼</div>
-            <div class="sticker" draggable="true" data-emoji="🏯" title="Temple">🏯</div>
-            <div class="sticker" draggable="true" data-emoji="🏮" title="Lantern / night market">🏮</div>
-            <div class="sticker" draggable="true" data-emoji="🚄" title="HSR train">🚄</div>
-            <div class="sticker" draggable="true" data-emoji="🚇" title="MRT">🚇</div>
-            <div class="sticker" draggable="true" data-emoji="🧋" title="Bubble tea!">🧋</div>
-            <div class="sticker" draggable="true" data-emoji="🍢" title="Street food">🍢</div>
-            <div class="sticker" draggable="true" data-emoji="🍍" title="Pineapple cake / snacks">🍍</div>
-            <div class="sticker" draggable="true" data-emoji="🧧" title="Lucky red envelope vibe">🧧</div>
-            <div class="sticker" draggable="true" data-emoji="✨" title="Sparkles">✨</div>
-          </div>
-          <div class="drawerRow" aria-label="Stickers: nature & cute buddies">
-            <div class="sticker" draggable="true" data-emoji="🌸" title="Flowers">🌸</div>
-            <div class="sticker" draggable="true" data-emoji="⛰️" title="Mountains">⛰️</div>
-            <div class="sticker" draggable="true" data-emoji="🌊" title="Sea / river">🌊</div>
-            <div class="sticker" draggable="true" data-emoji="💦" title="Waterfall">💦</div>
-            <div class="sticker" draggable="true" data-emoji="♨️" title="Hot spring">♨️</div>
-            <div class="sticker" draggable="true" data-emoji="🧸" title="Teddy buddy">🧸</div>
-            <div class="sticker" draggable="true" data-emoji="🐼" title="Panda buddy">🐼</div>
-            <div class="sticker" draggable="true" data-emoji="🐱" title="Cat buddy">🐱</div>
-            <div class="sticker" draggable="true" data-emoji="🦊" title="Fox buddy">🦊</div>
-            <div class="sticker" draggable="true" data-emoji="🧁" title="Dessert">🧁</div>
-          </div>
-        </div>
-
-        <div class="canvasWrap">
-          <div class="canvas" id="canvas" aria-label="Scrapbook canvas" tabindex="0">
-            <div class="paper"></div>
-            <div class="stamp" id="stamp">TAIWAN ✦ TRIP</div>
-            <div class="pin" id="pin"><span aria-hidden="true">📍</span> <span id="pinText">Day view</span></div>
-            <div class="trash" id="trash" title="Drop stickers here to delete">🗑️ Trash</div>
-          </div>
-          <div class="hint">
-            <div class="mascot" aria-hidden="true">🧋</div>
-            <div>
-              <b>Pro tip:</b> Tap an itinerary item to open details, then press <b>“Add sticker”</b> to stamp that place into your scrapbook.
-              <div class="muted" style="margin-top:6px">Works offline. Everything is saved in your browser (localStorage).</div>
-            </div>
-          </div>
-        </div>
-      </aside>
+    <div class="filterRow">
+      <button class="pill" data-filter="all" aria-pressed="true">Anytime</button>
+      <button class="pill" data-filter="morning">Morning</button>
+      <button class="pill" data-filter="afternoon">Afternoon</button>
+      <button class="pill" data-filter="evening">Evening</button>
     </div>
 
-    <div class="footer">
-      <div>Made for a Taiwan trip scrapbook vibe ✨ • Single-file SPA</div>
-      <div class="muted">Tip: open this file in Chrome/Edge/Firefox. No internet required.</div>
-    </div>
+    <section class="cards" id="cards"></section>
+    <div class="empty" id="empty" hidden>No matching stops. Try clearing filters.</div>
+
+    <footer>Made with pastel vibes • Data stays in your browser (localStorage)</footer>
   </div>
 
-  <div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
-
-  <dialog id="dlg">
+  <dialog id="importDialog">
     <div class="modal">
-      <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
-        <h3 id="dlgTitle">Stop details</h3>
-        <button class="btn btn-ghost" id="dlgClose">✖ Close</button>
+      <div style="display:flex; justify-content: space-between; gap:8px; align-items:center; flex-wrap:wrap;">
+        <h2>Import from Google Sheets CSV</h2>
+        <button class="ghost" id="closeImport">✖ Close</button>
       </div>
 
-      <div class="grid" id="dlgGrid"></div>
+      <div class="stepper">
+        <div class="field">
+          <label>1) Paste public CSV URL</label>
+          <input id="csvUrl" placeholder="https://docs.google.com/.../pub?output=csv" />
+          <button class="primary" id="fetchCsv">Fetch URL</button>
+        </div>
 
-      <div class="field">
-        <label for="dlgNote">Your note (saved for this stop)</label>
-        <textarea id="dlgNote" placeholder="E.g., 'Buy pineapple cakes', 'Try pepper bun', 'Arrive early for sunset'"></textarea>
-      </div>
+        <div class="field">
+          <label>2) Or upload CSV file</label>
+          <input id="csvFile" type="file" accept=".csv,text/csv" />
+        </div>
 
-      <div class="foot">
-        <div class="muted" id="dlgHint">Tip: drag stickers around; double-click a sticker to remove it.</div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
-          <button class="btn btn-ghost" id="dlgMap">🗺️ Open map</button>
-          <button class="btn btn-primary" id="dlgSticker">📒 Add sticker</button>
+        <div class="field">
+          <label>3) Or paste CSV text</label>
+          <textarea id="csvText" placeholder="Day,StartTime,PlaceName,Address"></textarea>
+          <button class="ghost" id="useText">Use pasted CSV</button>
+        </div>
+
+        <div id="mapSection" hidden>
+          <h3>Map columns</h3>
+          <div class="mapGrid" id="mapGrid"></div>
+          <div class="preview" id="preview"></div>
+          <div class="error" id="importError" role="alert"></div>
+          <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; margin-top:6px;">
+            <button class="ghost" id="cancelImport">Cancel</button>
+            <button class="primary" id="confirmImport">Import</button>
+          </div>
         </div>
       </div>
     </div>
   </dialog>
 
-  <script id="trip-data" type="application/json">{"title":"Taiwan Trip Itinerary","subtitle":"Taichung + Taipei • Feb 18–24, 2026","days":[{"id":"day1","title":"Day 1 (18/02): Hanoi - Taichung - Yizhong Night Market","date":"2026-02-18","entries":[{"time":"11:30","place":"Noi Bai Airport (HAN)","address":"Hà Nội","activity":"Check-in + boarding","note":"Ăn nhẹ / đổi tiền / chuẩn bị SIM nếu cần","price":"—"},{"time":"13:30-17:00","place":"Flight VJ948: HAN -> RMQ","address":"Noi Bai -> Taichung Airport","activity":"Bay","note":"Mang theo bút điền tờ khai nếu có","price":"Vé: xem sheet Di chuyển"},{"time":"17:00-17:30","place":"Taichung Airport (RMQ)","address":"Taichung City","activity":"Nhập cảnh + lấy hành lý","note":"Mua EasyCard/SIM nếu cần","price":"—"},{"time":"17:30-18:30","place":"Bus/Taxi -> Twinstar Hotel (台中雙星大飯店)","address":"Near Taichung Railway Station, East District","activity":"Di chuyển + check-in","note":"Ưu tiên nghỉ 15-20’ rồi đi chợ đêm","price":"~50-300"},{"time":"19:30-22:00","place":"Yizhong Night Market (一中街夜市)","address":"Yizhong St, North District, Taichung","activity":"Ăn tối + dạo chợ đêm","note":"Gợi ý: gà rán, trà sữa, bánh khoai","price":"~200-450"}]},{"id":"day2","title":"Day 2 (19/02): Taichung - Taipei - Longshan Temple","date":"2026-02-19","entries":[{"time":"09:00-10:15","place":"Taichung Second Market (台中第二市場)","address":"Central District, Taichung","activity":"Ăn sáng + food tour","note":"Món gợi ý: mì/hoành thánh, trà sữa","price":"~150-300"},{"time":"10:30-11:30","place":"Miyahara (宮原眼科)","address":"Central District, Taichung","activity":"Dessert + chụp ảnh","note":"Kem + bánh kẹo làm quà","price":"~200-500"},{"time":"12:00-13:30","place":"HSR: Taichung -> Taipei Main Station","address":"Taichung HSR -> Taipei","activity":"Di chuyển (HSR)","note":"Canh giờ tàu, tới sớm 15-20’","price":"~700-900"},{"time":"14:00-15:00","place":"Check-in: Just Sleep Ximending","address":"Wanhua District, Taipei","activity":"Check-in + nghỉ","note":"Gửi hành lý nếu chưa tới giờ nhận phòng","price":"—"},{"time":"15:30-16:45","place":"Longshan Temple (龍山寺)","address":"No. 211, Guangzhou St, Wanhua, Taipei","activity":"Tham quan + cầu an","note":"Đi chùa đúng dịp Tết, cầu an, không khí lễ rất rõ","price":"Free"},{"time":"16:50-17:30","place":"Bopiliao Historical Block (剝皮寮)","address":"Kangding Rd, Wanhua, Taipei","activity":"Dạo phố cổ + chụp ảnh","note":"Phố cổ nhỏ ngay sau chùa Longshan","price":"Free"},{"time":"18:00-20:00","place":"Huaxi Street Night Market","address":"Huaxi St, Wanhua, Taipei","activity":"Thưởng thức Wang Broth","note":"Đi bộ từ Long Sơn sang chợ đêm, ăn khuya, trải nghiệm khu phố đèn lồng kiểu xưa","price":"~200-450"}]},{"id":"day3","title":"Day 3 (20/02): City day","date":"2026-02-20","entries":[{"time":"09:00-10:30","place":"CKS Memorial Hall (中正紀念堂)","address":"No. 21, Zhongshan S Rd, Zhongzheng, Taipei","activity":"Tham quan + chụp ảnh","note":"Canh đổi gác nếu bạn thích (tùy giờ)","price":"Free"},{"time":"10:45-12:00","place":"National Taiwan Museum (國立臺灣博物館)","address":"No. 2, Xiangyang Rd, Zhongzheng, Taipei","activity":"Tham quan bảo tàng","note":"Đi nhẹ nhàng, hợp ngày trời nóng/đông","price":"~30-50"},{"time":"12:15-14:00","place":"Về khách sạn nghỉ trưa","address":"Ximending","activity":"Nghỉ + ăn trưa","note":"Nạp năng lượng để chiều đi Dadaocheng","price":"~200-400"},{"time":"14:00-14:45","place":"Chuyển đến Hotel Relax II","address":"Near Taipei Main Station","activity":"Di chuyển + check-in","note":"Gửi hành lý/nhận phòng","price":"—"},{"time":"15:30-17:30","place":"Dihua Old Street (迪化街)","address":"Sec. 1, Dihua St, Datong, Taipei","activity":"Dạo phố cổ + mua đồ","note":"Hợp mua trà/bánh kẹo/quà","price":"~200-600"},{"time":"17:30-19:30","place":"Dadaocheng Wharf Container Market (大稻埕碼頭貨櫃市集)","address":"Dadaocheng Wharf, Datong, Taipei","activity":"Ăn tối + ngắm sông","note":"Đi lúc lên đèn rất đẹp, nhiều đồ ăn","price":"~250-500"}]},{"id":"day4","title":"Day 4 (21/02): Tamsui + Wuji Tianyuan Temple (ngắm hoa)","date":"2026-02-21","entries":[{"time":"08:30-09:20","place":"MRT Red Line -> Tamsui (淡水站)","address":null,"activity":"Di chuyển","note":"Đi sớm để né đông","price":"~25-50"},{"time":"09:20-09:50","place":"Di chuyển: Tamsui -> Wuji Tianyuan Temple (無極天元宮)","address":"淡水區北新路三段36號","activity":"Bus/Taxi","note":"Bus local từ bến gần MRT (thường dùng) hoặc taxi cho nhanh","price":"~30-250"},{"time":"09:50-11:20","place":"Wuji Tianyuan Temple (無極天元宮)","address":"淡水區北新路三段36號","activity":"Ngắm hoa + chụp ảnh","note":"Đi vòng lên tầng cao để lấy góc tròn của đền; đông thì chụp “wide” sẽ đẹp hơn","price":"Free"},{"time":"11:20-11:50","place":"Di chuyển về lại Tamsui (淡水)","address":null,"activity":"Di chuyển","note":null,"price":"~30-250"},{"time":"12:00-13:00","place":"Tamsui Old Street (淡水老街)","address":"New Taipei City, Tamsui","activity":"Ăn trưa + ăn vặt","note":"Gợi ý: a-gei, fish ball soup, bánh trứng","price":"~150-350"},{"time":"13:10-14:10","place":"Fort San Domingo (紅毛城)","address":"淡水區中正路28巷1號","activity":"Tham quan","note":"Chụp ảnh + đi dạo khu cổ","price":"~80-100"},{"time":"14:20-15:20","place":"Dạo bờ sông Tamsui / phố ven sông","address":null,"activity":"Chill + chụp ảnh","note":"Đi nhẹ nhàng, nhiều góc rất “film”","price":"Free"},{"time":"15:30-17:30","place":"Fisherman’s Wharf (淡水漁人碼頭)","address":"淡水區觀海路","activity":"Ngắm biển + đi cầu tình nhân","note":"Canh hoàng hôn ở đây là chuẩn bài","price":"Free"},{"time":"17:30-18:30","place":"Cafe/ăn nhẹ quanh Wharf","address":null,"activity":"Chill","note":"Ngồi nghỉ, chờ lên đèn","price":"~150-300"},{"time":"18:45-20:00","place":"Ăn tối + dạo lại Tamsui Old Street (nếu còn sức)","address":null,"activity":"Tối","note":"Đổi vibe: tối đông nhưng vui","price":"~200-450"},{"time":"20:00-21:00","place":"Về khách sạn (MRT)","address":null,"activity":"Di chuyển","note":null,"price":"~25-50"}]},{"id":"day5","title":"Day 5 (22/02): City day (no hiking)","date":"2026-02-22","entries":[{"time":"09:30-11:30","place":"Taipei 101 / Observatory","address":"台北市信義區信義路五段7號","activity":"Ngắm view","note":"Đi buổi sáng cho thoáng","price":"~600-750"},{"time":"11:30-12:30","place":"Xinyi area (quảng trường + mall)","address":"信義區","activity":"Dạo phố + shopping","note":"Chụp ảnh khu Xinyi, vibe hiện đại","price":"Free"},{"time":"12:30-13:30","place":"Ăn trưa (Xinyi)","address":null,"activity":"Dùng bữa","note":"Chọn món nhanh để đi tiếp","price":"~250-600"},{"time":"13:45-14:30","place":"Sun Yat-sen Memorial Hall (國父紀念館)","address":"台北市信義區仁愛路四段505號","activity":"Tham quan nhẹ + dạo vườn","note":"Không phải leo, đi rất “chill”","price":"Free"},{"time":"14:45-16:15","place":"Songshan Cultural & Creative Park","address":"台北市信義區光復南路133號","activity":"Dạo + check-in","note":"Nhiều góc chụp + triển lãm nhỏ","price":"Free"},{"time":"16:30-18:00","place":"Huashan 1914 Creative Park (華山1914)","address":"台北市中正區八德路一段1號","activity":"Chill + mua đồ lặt vặt","note":"Vibe creative, dễ đi, nhiều quán hay","price":"Free"},{"time":"18:30-20:30","place":"Ningxia Night Market (寧夏夜市) hoặc Raohe Night Market (饒河街夜市)","address":"Datong/Songshan","activity":"Ăn tối + chợ đêm","note":"Ningxia dễ ăn - Raohe nổi tiếng pepper bun","price":"~200-450"},{"time":"20:30-21:30","place":"Về khách sạn","address":null,"activity":"Di chuyển","note":null,"price":"~25-60"}]},{"id":"day6","title":"Day 6 (23/02): Shifen - Jiufen","date":"2026-02-23","entries":[{"time":"08:00-09:00","place":"Taipei Main Station -> Ruifang (瑞芳)","address":null,"activity":"Di chuyển","note":"Tàu nhanh + dễ đi nhất","price":"~50-80"},{"time":"09:10-09:50","place":"Ruifang -> Shifen (十分) (Pingxi Line)","address":null,"activity":"Di chuyển","note":"Canh giờ tàu Pingxi Line","price":"~20-40"},{"time":"09:50-11:00","place":"Shifen Old Street (十分老街)","address":"New Taipei, Pingxi","activity":"Thả đèn trời + dạo phố","note":"Nếu thả đèn: viết 4 mặt cho “đúng bài”","price":"~200-350/đèn"},{"time":"11:10-12:00","place":"Shifen Waterfall (十分瀑布)","address":"New Taipei, Pingxi","activity":"Đi bộ ngắm thác","note":"Đi giày dễ đi vì đường dốc nhẹ","price":"Free"},{"time":"12:00-13:00","place":"Ăn trưa ở Shifen","address":null,"activity":"Dùng bữa","note":"Ăn gọn để kịp qua Jiufen","price":"~150-300"},{"time":"13:00-14:00","place":"Di chuyển: Shifen/Ruifang -> Jiufen","address":null,"activity":"Di chuyển","note":"Đi bus từ Ruifang sẽ ổn định hơn","price":"~30-60"},{"time":"14:00-17:30","place":"Jiufen Old Street (九份老街)","address":"New Taipei, Ruifang","activity":"Ăn vặt + tea house","note":"Chọn 1 tea house ngồi ngắm view (đỡ “đuối chân”)","price":"~200-600"},{"time":"17:30-19:00","place":"Jiufen -> Taipei (bus về Zhongxiao Fuxing/Taipei Main)","address":null,"activity":"Di chuyển","note":"Ngắm lên đèn rồi về","price":"~90-120"},{"time":"19:30-20:30","place":"Về khách sạn nghỉ","address":null,"activity":"Rest","note":"Nếu còn sức: đi dạo Ximending nhẹ thôi","price":"—"}]},{"id":"day7","title":"Day 7 (24/02): Taipei - Hanoi","date":"2026-02-24","entries":[{"time":"09:00-10:30","place":"Check-out + gửi hành lý","address":"Hotel","activity":"Logistics","note":"Nếu bay tối, nên gửi hành lý để rảnh đi chơi","price":"—"},{"time":"10:30-12:00","place":"Taipei Main Underground Mall / Ximending","address":"Zhongzheng/Wanhua, Taipei","activity":"Mua quà + dạo phố","note":"Bánh dứa, trà, đồ lưu niệm","price":"~200-800"},{"time":"12:00-13:00","place":"Ăn trưa","address":"Gần Taipei Main","activity":"Dùng bữa","note":"Ăn gọn, ưu tiên gần tuyến Airport MRT","price":"~200-400"},{"time":"13:00-15:30","place":"Free time / nghỉ","address":null,"activity":"Tùy chọn","note":"Café/pack hành lý, tránh mua đồ quá cồng kềnh","price":"—"},{"time":"15:30-16:20","place":"Airport MRT -> Taoyuan Airport (TPE)","address":"Taipei Main -> TPE","activity":"Di chuyển","note":"Nên tới sân bay trước 2.5-3h","price":"~160"},{"time":"16:20-18:30","place":"Taoyuan Airport (TPE)","address":"Taoyuan","activity":"Check-in + security","note":"Ăn nhẹ, chuẩn bị boarding","price":"—"},{"time":"19:00","place":"Flight VJ943: TPE -> HAN","address":null,"activity":"Bay","note":"Giờ hạ cánh tùy lịch hãng","price":"Vé: xem sheet Di chuyển"}]}],"extras":[{"city":"Taichung","name":"Chun Shui Tang","intro":null,"activities":null,"address":null},{"city":"Taichung","name":"Fu Kuei Ting","intro":null,"activities":null,"address":null},{"city":"Taichung","name":"Miyahara","intro":null,"activities":null,"address":null},{"city":"Taichung","name":"Fengchia Night Market","intro":null,"activities":null,"address":null},{"city":"Taichung","name":"Fu din wang","intro":null,"activities":null,"address":null},{"city":"Taichung","name":"Chin Chih Yuan","intro":null,"activities":null,"address":null},{"city":"Taipei","name":"Lungshan Temple","intro":null,"activities":null,"address":null},{"city":"Taipei","name":"Bopiliao Historical Block","intro":"Toà nhà cổ","activities":null,"address":null},{"city":"Taipei","name":"Huaxi Street Night Market","intro":null,"activities":"Yuan Fang Gua bao","address":null},{"city":"Taipei","name":"Raohe Night Market","intro":"Chợ đêm","activities":"Fuzhou Ancestor Pepper Pie","address":null},{"city":"Taipei","name":"Gloria Outlet","intro":"Outlet mua đồ + ăn uống trước khi ra sân bay","activities":null,"address":null},{"city":"Taipei","name":"Chongxin Bridge Flea Market","intro":"Chợ trời/Đồ 2nd, chỉ mở buổi sáng","activities":null,"address":"No. 1號, Shuhong 16th Rd, Sanchong District, New Taipei City, Đài Loan 241"},{"city":"Taipei","name":"Ningxia Night Market","intro":null,"activities":null,"address":null},{"city":"Taipei","name":"Elephent Mountain","intro":"Climbing","activities":null,"address":null},{"city":"Taipei","name":"Houtong Village","intro":null,"activities":null,"address":null},{"city":"Taipei","name":"?","intro":"?","activities":"Scallion Pancake","address":null}],"meta":{"source":"Hanoi20Taichung20Taipei2018-24.2.2026_filled.xlsx","generatedOn":"2025-12-12"}}</script>
-
   <script>
-  (() => {
-    const TRIP = JSON.parse(document.getElementById('trip-data').textContent);
+    /* DATA MODEL
+      itinerary = [
+        { id: 'day1', title: 'Day 1', date: '2026-02-18', entries: [
+            { start: '09:00', end: '10:00', place: 'Taichung HSR', address: '8 Zhanqu 2nd Rd, Taichung', maps: 'https://...', notes: 'Pick up easycard' }
+        ]}
+      ]
+      Stored in localStorage under STORAGE_KEY. Cards sorted by start time when available.
+    */
 
-    // ---------- Utilities ----------
+    const STORAGE_KEY = 'tw-itinerary-v2';
     const $ = (q, el=document) => el.querySelector(q);
     const $$ = (q, el=document) => Array.from(el.querySelectorAll(q));
-    const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
-    const uid = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
-    const fmtDate = (iso) => {
-      try {
-        const d = new Date(iso + 'T00:00:00');
-        return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-      } catch {
-        return iso;
+    const tabs = $('#tabs');
+    const cards = $('#cards');
+    const empty = $('#empty');
+    const searchInput = $('#search');
+    const importDialog = $('#importDialog');
+    const mapSection = $('#mapSection');
+    const mapGrid = $('#mapGrid');
+    const preview = $('#preview');
+    const importError = $('#importError');
+
+    let itinerary = loadData();
+    let activeDay = itinerary[0]?.id || 'day1';
+    let timeFilter = 'all';
+
+    function loadData() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        try { return JSON.parse(raw); } catch (e) { console.warn('Failed to parse saved data', e); }
       }
-    };
-    const enc = (s) => encodeURIComponent(String(s || '').trim());
-
-    // ---------- Sound ----------
-    const audio = {
-      enabled: true,
-      ctx: null,
-      pop(freq=520, dur=0.06) {
-        if (!audio.enabled) return;
-        try {
-          audio.ctx = audio.ctx || new (window.AudioContext || window.webkitAudioContext)();
-          const t0 = audio.ctx.currentTime;
-          const o = audio.ctx.createOscillator();
-          const g = audio.ctx.createGain();
-          o.type = 'triangle';
-          o.frequency.setValueAtTime(freq, t0);
-          g.gain.setValueAtTime(0.0001, t0);
-          g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.01);
-          g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-          o.connect(g).connect(audio.ctx.destination);
-          o.start(t0);
-          o.stop(t0 + dur);
-        } catch {}
-      },
-      ding() { audio.pop(740, 0.08); setTimeout(() => audio.pop(980, 0.06), 70); },
-      swoosh() { audio.pop(360, 0.08); setTimeout(() => audio.pop(260, 0.08), 90); }
-    };
-
-    // ---------- Classification (cute icons) ----------
-    function classify(entry) {
-      const s = `${entry.place||''} ${entry.activity||''} ${entry.note||''}`.toLowerCase();
-      const has = (...k) => k.some(x => s.includes(x));
-      let cat = 'spot';
-      let icon = '📍';
-      let doodles = ['✨','🗺️'];
-      if (has('flight','airport','boarding','tpe','han','rmq','bay')) {
-        cat = 'travel'; icon = '✈️'; doodles = ['✈️','🧳','🛂','✨'];
-      } else if (has('hsr','train','mrt','bus','taxi','di chuyển','metro')) {
-        cat = 'travel'; icon = has('mrt','metro') ? '🚇' : '🚄'; doodles = ['🎫', icon, '🧳','✨'];
-      } else if (has('night market','chợ đêm')) {
-        cat = 'food'; icon = '🏮'; doodles = ['🏮','🍢','🧋','😋'];
-      } else if (has('temple','chùa','longshan','tianyuan','天元','無極','wuj')) {
-        cat = 'culture'; icon = '🏯'; doodles = ['🏯','🙏','🧧','✨'];
-      } else if (has('museum','bảo tàng','memorial','hall')) {
-        cat = 'culture'; icon = '🏛️'; doodles = ['🏛️','📸','✨','🧠'];
-      } else if (has('old street','phố cổ','dihua','ximending','outlet','mall','shopping','creative')) {
-        cat = 'shopping'; icon = '🛍️'; doodles = ['🛍️','🧋','📸','✨'];
-      } else if (has('wharf','river','sông','sea','bờ sông','fisherman')) {
-        cat = 'nature'; icon = '🌊'; doodles = ['🌊','🌅','📸','✨'];
-      } else if (has('waterfall','瀑布')) {
-        cat = 'nature'; icon = '💦'; doodles = ['💦','🌿','📸','✨'];
-      } else if (has('park','cultural','huashan','songshan')) {
-        cat = 'fun'; icon = '🎨'; doodles = ['🎨','🧸','🧋','✨'];
-      } else if (has('101','observatory','taipei 101')) {
-        cat = 'landmark'; icon = '🗼'; doodles = ['🗼','🌆','📸','✨'];
-      } else if (has('flower','hoa','ngắm hoa','🌸')) {
-        cat = 'nature'; icon = '🌸'; doodles = ['🌸','📸','🧋','✨'];
-      } else if (has('cafe','dessert','kem','ăn sáng','ăn trưa','ăn tối','food')) {
-        cat = 'food'; icon = '🧋'; doodles = ['🧋','🍜','🧁','✨'];
-      } else if (has('hotel','check-in','check out','check-out','nghỉ','rest')) {
-        cat = 'rest'; icon = '🛌'; doodles = ['🛌','🧸','☁️','✨'];
-      }
-      return { cat, icon, doodles };
+      return sampleData();
     }
 
-    function dayEmoji(dayTitle) {
-      const t = dayTitle.toLowerCase();
-      if (t.includes('taichung')) return '🏮';
-      if (t.includes('jiufen') || t.includes('shifen')) return '💦';
-      if (t.includes('tamsui')) return '🌊';
-      if (t.includes('hanoi')) return '✈️';
-      if (t.includes('city')) return '🗼';
-      return '📍';
+    function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(itinerary)); }
+
+    function sampleData() {
+      return [
+        { id: 'day1', title: 'Day 1', date: '2026-02-18', entries: [
+          { start: '09:30', end: '10:30', place: 'Taichung HSR Station', address: '8 Zhanqu 2nd Rd, Wuri District, Taichung', maps: '', notes: 'Pick up EasyCard & SIM.' },
+          { start: '11:30', end: '13:00', place: 'Chun Shui Tang', address: '30 Siwei St, Taichung', maps: '', notes: 'Original bubble tea!' },
+          { start: '16:00', end: '18:00', place: 'Gaomei Wetlands', address: 'Qingshui District, Taichung City', maps: '', notes: 'Sunset boardwalk.' }
+        ]},
+        { id: 'day2', title: 'Day 2', date: '2026-02-19', entries: [
+          { start: '10:00', end: '12:00', place: 'National Taichung Theater', address: '101 Sec 2, Huilai Rd, Xitun', maps: '', notes: 'Futuristic curves & photo time.' },
+          { start: '18:30', end: '21:00', place: 'Fengjia Night Market', address: 'Xitun District, Taichung City', maps: '', notes: 'Street food crawl.' }
+        ]},
+        { id: 'day3', title: 'Day 3', date: '2026-02-20', entries: [
+          { start: '09:00', end: '11:30', place: 'Chiang Kai-shek Memorial Hall', address: '21 Zhongshan S Rd, Taipei', maps: '', notes: 'Changing of the guards.' },
+          { start: '12:30', end: '13:30', place: 'Yongkang Beef Noodles', address: '17 Ln 31, Sec 2, Jinshan S Rd, Taipei', maps: '', notes: 'Lunch stop.' },
+          { start: '18:00', end: '21:00', place: 'Raohe Night Market', address: 'Raohe St, Songshan District, Taipei', maps: '', notes: 'Pepper bun & mochi.' }
+        ]}
+      ];
     }
 
-    // ---------- State ----------
-    const KEY = 'twItin.v1';
-    const loadState = () => {
-      try { return JSON.parse(localStorage.getItem(KEY) || '{}'); }
-      catch { return {}; }
-    };
-    const state = Object.assign({
-      active: 'day1',
-      search: '',
-      showNotes: true,
-      showAddr: false,
-      sounds: true,
-      kid: true,
-      done: {},
-      fav: {},
-      notes: {},
-      stickers: {}
-    }, loadState());
-    const saveState = () => localStorage.setItem(KEY, JSON.stringify(state));
-
-    // ---------- Elements ----------
-    const tripTitle = $('#tripTitle');
-    const tripSubtitle = $('#tripSubtitle');
-    const dayTabs = $('#dayTabs');
-    const list = $('#list');
-    const panelTitle = $('#panelTitle');
-    const panelMeta = $('#panelMeta');
-    const scrapMeta = $('#scrapMeta');
-    const pinText = $('#pinText');
-    const progressChip = $('#progressChip');
-    const search = $('#search');
-    const tNotes = $('#tNotes');
-    const tAddr = $('#tAddr');
-    const tSounds = $('#tSounds');
-    const tKid = $('#tKid');
-    const btnAll = $('#btnAll');
-    const btnReset = $('#btnReset');
-    const btnHelp = $('#btnHelp');
-    const btnPrint = $('#btnPrint');
-    const btnShuffle = $('#btnShuffle');
-    const canvas = $('#canvas');
-    const trash = $('#trash');
-
-    const dlg = $('#dlg');
-    const dlgClose = $('#dlgClose');
-    const dlgTitle = $('#dlgTitle');
-    const dlgGrid = $('#dlgGrid');
-    const dlgNote = $('#dlgNote');
-    const dlgMap = $('#dlgMap');
-    const dlgSticker = $('#dlgSticker');
-    const toast = $('#toast');
-
-    tripTitle.textContent = TRIP.title || 'Taiwan Trip Itinerary';
-    tripSubtitle.textContent = TRIP.subtitle || '';
-
-    // ---------- Toast ----------
-    function showToast(msg, emoji='✨') {
-      const el = document.createElement('div');
-      el.className = 't';
-      el.innerHTML = `<span style="font-size:16px" aria-hidden="true">${emoji}</span><span>${escapeHtml(msg)}</span>`;
-      toast.appendChild(el);
-      setTimeout(() => el.style.opacity = '0', 2400);
-      setTimeout(() => el.remove(), 3000);
-    }
-
-    // ---------- Progress ----------
-    function computeProgress() {
-      let total = 0, done = 0;
-      for (const d of TRIP.days) {
-        const arr = state.done[d.id] || [];
-        total += d.entries.length;
-        done += arr.filter(Boolean).length;
-      }
-      const pct = total ? Math.round((done/total)*100) : 0;
-      progressChip.innerHTML = `<span aria-hidden="true">✅</span> <b>${pct}%</b> done`;
-      return { total, done, pct };
-    }
-
-    // ---------- Tabs ----------
     function renderTabs() {
-      dayTabs.innerHTML = '';
-      for (const d of TRIP.days) {
-        const tab = document.createElement('div');
-        tab.className = 'tab';
-        tab.role = 'tab';
-        tab.tabIndex = 0;
-        tab.dataset.day = d.id;
-        tab.setAttribute('aria-selected', String(state.active === d.id));
-        tab.innerHTML = `<span aria-hidden="true">${dayEmoji(d.title)}</span>
-          <span><b>${d.id.replace('day','Day ')}</b> <small>${fmtDate(d.date)}</small></span>`;
-        tab.addEventListener('click', () => setActive(d.id));
-        tab.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActive(d.id); }
-        });
-        dayTabs.appendChild(tab);
-      }
+      tabs.innerHTML = '';
+      itinerary.forEach((day, idx) => {
+        const b = document.createElement('button');
+        b.className = 'tab';
+        b.textContent = `${day.title || ('Day ' + (idx + 1))}${day.date ? ' • ' + day.date : ''}`;
+        b.setAttribute('aria-selected', day.id === activeDay);
+        b.onclick = () => { activeDay = day.id; render(); };
+        tabs.appendChild(b);
+      });
     }
 
-    function setActive(dayId) {
-      state.active = dayId;
-      saveState();
-      renderTabs();
-      renderAll();
-      audio.swoosh();
+    function matchesFilter(entry) {
+      if (timeFilter === 'all' || !entry.start) return true;
+      const [h] = entry.start.split(':').map(Number);
+      if (timeFilter === 'morning') return h < 12;
+      if (timeFilter === 'afternoon') return h >= 12 && h < 17;
+      if (timeFilter === 'evening') return h >= 17;
+      return true;
     }
 
-    // ---------- Itinerary list ----------
-    function getVisibleDays() {
-      if (state.active === 'all') return TRIP.days;
-      const day = TRIP.days.find(x => x.id === state.active) || TRIP.days[0];
-      return [day];
-    }
+    function renderCards(day) {
+      cards.innerHTML = '';
+      const term = searchInput.value.trim().toLowerCase();
+      const entries = [...day.entries].sort((a,b) => (a.start||'') > (b.start||'') ? 1 : -1)
+        .filter(e => matchesFilter(e))
+        .filter(e => !term || (e.place && e.place.toLowerCase().includes(term)) || (e.address && e.address.toLowerCase().includes(term)));
 
-    function entryKey(dayId, idx) { return `${dayId}:${idx}`; }
+      const nextIdx = findNextIndex(entries);
 
-    function matchesSearch(entry) {
-      const q = (state.search || '').trim().toLowerCase();
-      if (!q) return true;
-      const hay = `${entry.time||''} ${entry.place||''} ${entry.address||''} ${entry.activity||''} ${entry.note||''} ${entry.price||''}`.toLowerCase();
-      return hay.includes(q);
-    }
+      entries.forEach((e, idx) => {
+        const card = document.createElement('article');
+        card.className = 'card' + (idx === nextIdx ? ' next' : '');
 
-    function renderHeaderMeta(days) {
-      if (state.active === 'all') {
-        panelTitle.textContent = 'All days (overview)';
-        panelMeta.innerHTML = `<span class="chip"><span aria-hidden="true">🧭</span> 7 days • ${escapeHtml(TRIP.subtitle || '')}</span>
-          <span class="chip"><span aria-hidden="true">⭐</span> Stars help you remember must-dos</span>`;
-        pinText.textContent = 'Whole trip';
-        scrapMeta.innerHTML = `<span class="chip"><span aria-hidden="true">📌</span> Trip scrapbook</span>`;
-      } else {
-        const d = days[0];
-        panelTitle.textContent = d.title;
-        panelMeta.innerHTML = `<span class="chip"><span aria-hidden="true">🗓️</span> <b>${fmtDate(d.date)}</b></span>
-          <span class="chip"><span aria-hidden="true">🕒</span> ${d.entries.length} stops</span>
-          <span class="chip"><span aria-hidden="true">✅</span> Tap checkbox to mark done</span>`;
-        pinText.textContent = `${d.id.toUpperCase()} • ${fmtDate(d.date)}`;
-        scrapMeta.innerHTML = `<span class="chip"><span aria-hidden="true">📍</span> ${d.id.toUpperCase()} scrapbook</span>`;
-      }
-    }
+        const dot = document.createElement('div');
+        dot.className = 'timelineDot';
+        card.appendChild(dot);
 
-    function renderList() {
-      const days = getVisibleDays();
-      renderHeaderMeta(days);
-      list.innerHTML = '';
+        const main = document.createElement('div');
+        main.innerHTML = `<div class="timeTag">${formatTime(e)}</div><h3>${escapeHtml(e.place || 'Untitled')}</h3>`;
+        if (e.address) {
+          const addr = document.createElement('div');
+          addr.className = 'muted addr';
+          addr.textContent = e.address;
+          main.appendChild(addr);
+        }
+        if (e.notes) {
+          const notes = document.createElement('div');
+          notes.className = 'notes';
+          notes.textContent = e.notes;
+          main.appendChild(notes);
+        }
+        card.appendChild(main);
 
-      for (const d of days) {
-        const div = document.createElement('div');
-        div.className = 'dayDivider';
-        div.innerHTML = `
-          <div class="dtitle"><span aria-hidden="true">${dayEmoji(d.title)}</span> ${escapeHtml(d.title)}</div>
-          <div class="dmeta">
-            <span class="chip"><span aria-hidden="true">🗓️</span> <b>${fmtDate(d.date)}</b></span>
-            <span class="chip"><span aria-hidden="true">🧩</span> ${d.entries.length} stops</span>
-          </div>
-        `;
-        if (state.active === 'all') list.appendChild(div);
-
-        d.entries.forEach((entry, idx) => {
-          if (!matchesSearch(entry)) return;
-          const { icon, doodles, cat } = classify(entry);
-          const doneArr = state.done[d.id] || [];
-          const favArr = state.fav[d.id] || [];
-          const isDone = !!doneArr[idx];
-          const isFav = !!favArr[idx];
-
-          const card = document.createElement('div');
-          card.className = 'item';
-          card.dataset.day = d.id;
-          card.dataset.idx = String(idx);
-
-          const addressLine = entry.address ? `<span class="tag"><span aria-hidden="true">📌</span> ${escapeHtml(entry.address)}</span>` : '';
-          const noteLine = entry.note ? `<span class="tag"><span aria-hidden="true">📝</span> ${escapeHtml(entry.note)}</span>` : '';
-          const priceLine = entry.price ? `<span class="tag"><span aria-hidden="true">💰</span> ${escapeHtml(entry.price)}</span>` : '';
-
-          card.innerHTML = `
-            <div class="tick">
-              <input class="cb" type="checkbox" aria-label="Mark done" ${isDone ? 'checked' : ''}>
-              <div class="time" title="Time">${escapeHtml(entry.time)}</div>
-            </div>
-            <div class="main">
-              <div class="place">
-                <span class="icon" aria-hidden="true">${icon}</span>
-                <b>${escapeHtml(entry.place || 'Untitled stop')}</b>
-                <span class="tag" title="Category"><span aria-hidden="true">🏷️</span> ${escapeHtml(cat)}</span>
-              </div>
-              <div class="subline">
-                <div class="row">
-                  <span class="tag"><span aria-hidden="true">🎯</span> ${escapeHtml(entry.activity || 'Explore')}</span>
-                  ${priceLine}
-                </div>
-                <div class="row" style="${(state.showAddr && entry.address) ? '' : 'display:none'}" data-role="addr">
-                  ${addressLine}
-                </div>
-                <div class="row" style="${(state.showNotes && entry.note) ? '' : 'display:none'}" data-role="note">
-                  ${noteLine}
-                </div>
-                <div class="row">
-                  <span class="doodles" aria-hidden="true">${doodles.join(' ')}</span>
-                </div>
-              </div>
-            </div>
-            <div class="right">
-              <button class="mini star" aria-pressed="${isFav}" title="Star this stop">⭐</button>
-              <button class="mini btn-ghost" title="Open details">🔍</button>
-            </div>
-          `;
-
-          const cb = $('.cb', card);
-          cb.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const arr = state.done[d.id] || Array(d.entries.length).fill(false);
-            arr[idx] = cb.checked;
-            state.done[d.id] = arr;
-            saveState();
-            computeProgress();
-            audio.ding();
-            showToast(cb.checked ? 'Marked done!' : 'Undone.', cb.checked ? '✅' : '↩️');
-          });
-
-          const star = $('.star', card);
-          star.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const arr = state.fav[d.id] || Array(d.entries.length).fill(false);
-            arr[idx] = !arr[idx];
-            state.fav[d.id] = arr;
-            star.setAttribute('aria-pressed', String(arr[idx]));
-            saveState();
-            audio.pop(arr[idx] ? 880 : 420, 0.07);
-            showToast(arr[idx] ? 'Starred!' : 'Unstarred.', '⭐');
-          });
-
-          card.addEventListener('click', () => openDetails(d, entry, idx));
-          list.appendChild(card);
-        });
-      }
-
-      if (state.active !== 'all') {
-        const d = days[0];
-        const head = document.createElement('div');
-        head.className = 'dayDivider';
-        head.innerHTML = `
-          <div class="dtitle"><span aria-hidden="true">${dayEmoji(d.title)}</span> ${escapeHtml(d.title)}</div>
-          <div class="dmeta">
-            <span class="chip"><span aria-hidden="true">🗓️</span> <b>${fmtDate(d.date)}</b></span>
-            <span class="chip"><span aria-hidden="true">🧩</span> ${d.entries.length} stops</span>
-          </div>
-        `;
-        list.prepend(head);
-      }
-    }
-
-    // ---------- Details modal ----------
-    let currentDetail = null;
-    function openDetails(day, entry, idx) {
-      currentDetail = { day, entry, idx };
-      const k = entryKey(day.id, idx);
-      dlgTitle.textContent = `${day.id.toUpperCase()} • ${entry.time} • ${entry.place}`;
-      const cls = classify(entry);
-
-      dlgGrid.innerHTML = '';
-      dlgGrid.appendChild(field('Category', `${cls.icon} ${cls.cat}`));
-      dlgGrid.appendChild(field('Activity', entry.activity || 'Explore'));
-      dlgGrid.appendChild(field('Price', entry.price || '—'));
-      dlgGrid.appendChild(field('Address', entry.address || '—'));
-      dlgGrid.appendChild(field('Notes', entry.note || '—'));
-      dlgGrid.appendChild(field('Doodles', cls.doodles.join(' ')));
-
-      dlgNote.value = state.notes[k] || '';
-      dlgNote.oninput = () => {
-        state.notes[k] = dlgNote.value;
-        saveState();
-      };
-
-      dlgMap.onclick = () => {
-        const q = entry.address || entry.place || '';
-        const url = `https://www.google.com/maps/search/?api=1&query=${enc(q)}`;
-        window.open(url, '_blank', 'noopener');
-        audio.pop(620, 0.08);
-      };
-
-      dlgSticker.onclick = () => {
-        const emoji = cls.icon;
-        addStickerToDay(state.active === 'all' ? day.id : state.active, emoji, {
-          x: 50 + Math.random()*240,
-          y: 60 + Math.random()*180,
-          r: (Math.random()*18 - 9),
-          s: state.kid ? 1.1 : 1.0
-        });
-        showToast('Stamped into your scrapbook!', '📒');
-        audio.ding();
-      };
-
-      dlg.showModal();
-      audio.pop(540, 0.08);
-    }
-
-    function field(label, value) {
-      const el = document.createElement('div');
-      el.className = 'field';
-      el.innerHTML = `<label>${escapeHtml(label)}</label><div class="val">${escapeHtml(value)}</div>`;
-      return el;
-    }
-
-    dlgClose.addEventListener('click', () => dlg.close());
-    dlg.addEventListener('click', (e) => {
-      const rect = dlg.getBoundingClientRect();
-      const inDialog = rect.top <= e.clientY && e.clientY <= rect.bottom && rect.left <= e.clientX && e.clientX <= rect.right;
-      if (!inDialog) dlg.close();
-    });
-
-    // ---------- Scrapbook stickers ----------
-    function getStickerListFor(dayId) {
-      if (!state.stickers[dayId]) state.stickers[dayId] = [];
-      return state.stickers[dayId];
-    }
-
-    function seedDefaultStickers() {
-      for (const d of TRIP.days) {
-        const arr = getStickerListFor(d.id);
-        if (arr.length) continue;
-        const base = [
-          { emoji: dayEmoji(d.title), x: 60, y: 90, r: -6, s: 1.15 },
-          { emoji: '🧋', x: 160, y: 140, r: 8, s: 1.1 },
-          { emoji: '✨', x: 245, y: 110, r: 0, s: 1.0 },
-        ];
-        const t = d.title.toLowerCase();
-        if (t.includes('tamsui')) base.push({ emoji: '🌊', x: 100, y: 190, r: -4, s: 1.05 });
-        if (t.includes('shifen') || t.includes('jiufen')) base.push({ emoji: '💦', x: 90, y: 210, r: 6, s: 1.05 });
-        if (t.includes('night market')) base.push({ emoji: '🏮', x: 205, y: 205, r: -7, s: 1.05 });
-        if (t.includes('101')) base.push({ emoji: '🗼', x: 220, y: 190, r: 5, s: 1.05 });
-        state.stickers[d.id] = base.map(x => Object.assign({ id: uid() }, x));
-      }
-      saveState();
-    }
-
-    function renderCanvas() {
-      $$('.stickerOnPaper', canvas).forEach(el => el.remove());
-
-      const dayId = state.active === 'all' ? 'day1' : state.active;
-      const items = getStickerListFor(dayId);
-
-      document.getElementById('stamp').textContent = state.active === 'all' ? 'TAIWAN ✦ TRIP' : `TAIWAN ✦ ${dayId.toUpperCase()}`;
-
-      for (const s of items) {
-        const el = document.createElement('div');
-        el.className = 'stickerOnPaper';
-        el.textContent = s.emoji;
-        el.dataset.id = s.id;
-        el.style.left = (s.x || 40) + 'px';
-        el.style.top = (s.y || 70) + 'px';
-        const scale = (state.kid ? (s.s || 1.0) * 1.15 : (s.s || 1.0));
-        el.style.transform = `translate(-50%, -50%) rotate(${s.r || 0}deg) scale(${scale})`;
-        el.title = 'Drag me! (double-click to delete)';
-        attachDrag(el, dayId);
-        el.ondblclick = () => {
-          removeSticker(dayId, s.id);
-          audio.pop(280, 0.08);
-          showToast('Sticker removed.', '🧽');
+        const actions = document.createElement('div');
+        actions.className = 'actionsRow';
+        const mapsBtn = document.createElement('button');
+        mapsBtn.textContent = '🗺️ Maps';
+        mapsBtn.onclick = () => {
+          const link = e.maps?.trim() || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((e.place||'') + ' ' + (e.address||''))}`;
+          window.open(link, '_blank', 'noopener');
         };
-        canvas.appendChild(el);
-      }
-    }
+        const copyBtn = document.createElement('button');
+        copyBtn.textContent = '📋 Copy address';
+        copyBtn.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(e.address || '');
+            copyBtn.textContent = '✅ Copied!';
+            setTimeout(() => copyBtn.textContent = '📋 Copy address', 1200);
+          } catch (err) { alert('Clipboard not available'); }
+        };
+        actions.append(mapsBtn, copyBtn);
+        card.appendChild(actions);
 
-    function addStickerToDay(dayId, emoji, opt={}) {
-      const items = getStickerListFor(dayId);
-      items.push({
-        id: uid(),
-        emoji,
-        x: opt.x ?? 120,
-        y: opt.y ?? 160,
-        r: opt.r ?? (Math.random()*18 - 9),
-        s: opt.s ?? 1.0
-      });
-      saveState();
-      renderCanvas();
-    }
-
-    function removeSticker(dayId, id) {
-      const items = getStickerListFor(dayId);
-      state.stickers[dayId] = items.filter(x => x.id !== id);
-      saveState();
-      renderCanvas();
-    }
-
-    function shuffleStickers() {
-      const dayId = state.active === 'all' ? 'day1' : state.active;
-      const items = getStickerListFor(dayId);
-      for (const s of items) {
-        s.x = clamp((s.x || 120) + (Math.random()*120 - 60), 30, canvas.clientWidth - 30);
-        s.y = clamp((s.y || 160) + (Math.random()*90 - 45), 40, canvas.clientHeight - 70);
-        s.r = (s.r || 0) + (Math.random()*18 - 9);
-      }
-      saveState();
-      renderCanvas();
-      audio.swoosh();
-      showToast('Sticker shuffle!', '🎲');
-    }
-    btnShuffle.addEventListener('click', shuffleStickers);
-
-    function attachDrag(el, dayId) {
-      let dragging = false;
-      let start = null;
-
-      const pointerDown = (ev) => {
-        dragging = true;
-        el.setPointerCapture?.(ev.pointerId);
-        const rect = canvas.getBoundingClientRect();
-        start = { pid: ev.pointerId, id: el.dataset.id };
-        audio.pop(420, 0.05);
-      };
-
-      const pointerMove = (ev) => {
-        if (!dragging || !start) return;
-        const rect = canvas.getBoundingClientRect();
-        const x = ev.clientX - rect.left;
-        const y = ev.clientY - rect.top;
-        el.style.left = x + 'px';
-        el.style.top = y + 'px';
-
-        const trect = trash.getBoundingClientRect();
-        const overTrash = (ev.clientX >= trect.left && ev.clientX <= trect.right && ev.clientY >= trect.top && ev.clientY <= trect.bottom);
-        trash.dataset.hot = overTrash ? 'true' : 'false';
-      };
-
-      const pointerUp = (ev) => {
-        if (!dragging || !start) return;
-        dragging = false;
-
-        const rect = canvas.getBoundingClientRect();
-        const x = clamp(ev.clientX - rect.left, 18, canvas.clientWidth - 18);
-        const y = clamp(ev.clientY - rect.top, 18, canvas.clientHeight - 60);
-
-        const trect = trash.getBoundingClientRect();
-        const overTrash = (ev.clientX >= trect.left && ev.clientX <= trect.right && ev.clientY >= trect.top && ev.clientY <= trect.bottom);
-        trash.dataset.hot = 'false';
-
-        if (overTrash) {
-          removeSticker(dayId, el.dataset.id);
-          audio.pop(220, 0.09);
-          showToast('Sticker tossed!', '🗑️');
-          return;
-        }
-
-        const items = getStickerListFor(dayId);
-        const item = items.find(s => s.id === el.dataset.id);
-        if (item) {
-          item.x = x;
-          item.y = y;
-          saveState();
-        }
-        audio.pop(520, 0.05);
-      };
-
-      el.addEventListener('pointerdown', pointerDown);
-      el.addEventListener('pointermove', pointerMove);
-      el.addEventListener('pointerup', pointerUp);
-      el.addEventListener('pointercancel', pointerUp);
-    }
-
-    function setupDrawer() {
-      $$('.sticker', document.getElementById('drawer')).forEach(s => {
-        s.addEventListener('dragstart', (e) => {
-          e.dataTransfer.setData('text/plain', s.dataset.emoji);
-          audio.pop(380, 0.06);
-        });
-        s.addEventListener('click', () => {
-          const dayId = state.active === 'all' ? 'day1' : state.active;
-          addStickerToDay(dayId, s.dataset.emoji, {
-            x: 120 + Math.random()*220,
-            y: 80 + Math.random()*180,
-            s: state.kid ? 1.12 : 1.0
-          });
-          audio.pop(640, 0.06);
-        });
+        cards.appendChild(card);
       });
 
-      canvas.addEventListener('dragover', (e) => { e.preventDefault(); });
-      canvas.addEventListener('drop', (e) => {
-        e.preventDefault();
-        const emoji = e.dataTransfer.getData('text/plain');
-        if (!emoji) return;
-        const rect = canvas.getBoundingClientRect();
-        const dayId = state.active === 'all' ? 'day1' : state.active;
-        addStickerToDay(dayId, emoji, {
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top,
-          s: state.kid ? 1.12 : 1.0
-        });
-        audio.ding();
-        showToast('Sticker dropped!', '📌');
-      });
+      empty.hidden = entries.length !== 0;
     }
 
-    // ---------- Toggles & actions ----------
-    const setToggle = (btn, val) => btn.setAttribute('aria-pressed', String(!!val));
-    function renderToggles() {
-      setToggle(tNotes, state.showNotes);
-      setToggle(tAddr, state.showAddr);
-      setToggle(tSounds, state.sounds);
-      setToggle(tKid, state.kid);
+    function formatTime(e) {
+      if (e.start && e.end) return `${e.start} – ${e.end}`;
+      if (e.start) return e.start;
+      return 'Anytime';
     }
 
-    tNotes.addEventListener('click', () => {
-      state.showNotes = !state.showNotes; saveState(); renderToggles(); renderList();
-      audio.pop(520, 0.06);
-    });
-    tAddr.addEventListener('click', () => {
-      state.showAddr = !state.showAddr; saveState(); renderToggles(); renderList();
-      audio.pop(520, 0.06);
-    });
-    tSounds.addEventListener('click', () => {
-      state.sounds = !state.sounds; audio.enabled = state.sounds;
-      saveState(); renderToggles(); audio.pop(740, 0.06);
-      showToast(state.sounds ? 'Sounds on!' : 'Sounds off.', state.sounds ? '🔊' : '🔇');
-    });
-    tKid.addEventListener('click', () => {
-      state.kid = !state.kid; saveState(); renderToggles(); renderCanvas();
-      audio.pop(state.kid ? 820 : 420, 0.07);
-      showToast(state.kid ? 'Kid mode: extra cute!' : 'Kid mode off.', state.kid ? '🧸' : '🙂');
-    });
-
-    btnAll.addEventListener('click', () => {
-      state.active = 'all'; saveState(); renderTabs(); renderAll(); audio.swoosh();
-      showToast('Showing all days!', '🧭');
-    });
-
-    btnPrint.addEventListener('click', () => window.print());
-
-    btnReset.addEventListener('click', () => {
-      if (!confirm('Reset everything? (done, stars, notes, stickers)')) return;
-      localStorage.removeItem(KEY);
-      Object.assign(state, {
-        active: 'day1', search: '', showNotes: true, showAddr: false, sounds: true, kid: true,
-        done: {}, fav: {}, notes: {}, stickers: {}
+    function findNextIndex(list) {
+      const now = new Date();
+      const curMinutes = now.getHours() * 60 + now.getMinutes();
+      let candidate = -1;
+      list.forEach((e, idx) => {
+        const mins = toMinutes(e.start);
+        if (mins === null) return;
+        if (mins >= curMinutes && candidate === -1) candidate = idx;
       });
-      saveState();
-      seedDefaultStickers();
+      return candidate;
+    }
+
+    function toMinutes(timeStr) {
+      if (!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr)) return null;
+      const [h,m] = timeStr.split(':').map(Number);
+      return h*60 + m;
+    }
+
+    function escapeHtml(str='') { return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+
+    function render() {
       renderTabs();
-      renderAll();
-      showToast('Reset complete!', '🧼');
-      audio.ding();
-    });
-
-    btnHelp.addEventListener('click', () => {
-      const msg = `How to use:
-• Pick a day (tabs)
-• Tick ✅ when done
-• Tap a stop to open details + add a sticker
-• Drag stickers around your scrapbook
-• Double-click sticker to delete (or drop onto 🗑️)
-• Search to filter stops
-
-Everything saves automatically in your browser.`;
-      alert(msg);
-    });
-
-    // Search
-    search.value = state.search || '';
-    search.addEventListener('input', () => {
-      state.search = search.value;
-      saveState();
-      renderList();
-    });
-
-    // ---------- HTML escaping ----------
-    function escapeHtml(s) {
-      return String(s ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+      const day = itinerary.find(d => d.id === activeDay) || itinerary[0];
+      if (!day) return;
+      renderCards(day);
+      $('#empty').textContent = `No items for ${day.title || day.id}.`;
     }
 
-    // ---------- Render all ----------
-    function renderAll() {
-      renderToggles();
-      audio.enabled = !!state.sounds;
-      renderList();
-      computeProgress();
-      seedDefaultStickers();
-      renderCanvas();
+    // Filters
+    $$('.pill').forEach(p => p.onclick = () => {
+      $$('.pill').forEach(x => x.setAttribute('aria-pressed', 'false'));
+      p.setAttribute('aria-pressed', 'true');
+      timeFilter = p.dataset.filter;
+      render();
+    });
+
+    searchInput.addEventListener('input', render);
+
+    // Reset
+    $('#btnReset').onclick = () => {
+      if (confirm('Clear saved data and restore sample trip?')) {
+        itinerary = sampleData();
+        saveData();
+        activeDay = itinerary[0].id;
+        render();
+      }
+    };
+
+    // Export
+    $('#btnExportCsv').onclick = () => download('taiwan-itinerary.csv', toCsv(itinerary));
+    $('#btnExportJson').onclick = () => download('taiwan-itinerary.json', JSON.stringify(itinerary, null, 2));
+
+    function toCsv(data) {
+      const rows = [['Day','Date','StartTime','EndTime','PlaceName','Address','MapsLink','Notes']];
+      data.forEach((d, i) => d.entries.forEach(e => {
+        rows.push([
+          d.title || `Day ${i+1}`,
+          d.date || '',
+          e.start || '',
+          e.end || '',
+          e.place || '',
+          e.address || '',
+          e.maps || '',
+          e.notes || ''
+        ]);
+      }));
+      return rows.map(r => r.map(cell => '"' + String(cell).replace(/"/g,'""') + '"').join(',')).join('\n');
     }
 
-    // ---------- Init ----------
-    renderTabs();
-    setupDrawer();
-    renderAll();
+    function download(filename, text) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+      a.download = filename;
+      a.click();
+    }
 
-  })();
+    // Import flow
+    $('#btnImport').onclick = () => importDialog.showModal();
+    $('#closeImport').onclick = () => importDialog.close();
+    $('#cancelImport').onclick = () => { mapSection.hidden = true; importError.textContent = ''; };
+
+    $('#fetchCsv').onclick = async () => {
+      const url = $('#csvUrl').value.trim();
+      if (!url) return alert('Paste a CSV URL first');
+      try {
+        const res = await fetch(url);
+        const text = await res.text();
+        handleCsvText(text);
+      } catch (e) { importError.textContent = 'Could not fetch URL. Make sure it is published as CSV.'; }
+    };
+
+    $('#useText').onclick = () => {
+      const text = $('#csvText').value.trim();
+      if (!text) return alert('Paste some CSV content');
+      handleCsvText(text);
+    };
+
+    $('#csvFile').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      file.text().then(handleCsvText);
+    });
+
+    let pendingRows = [];
+    let headers = [];
+
+    function handleCsvText(text) {
+      const { rows, header } = parseCsv(text);
+      if (!rows.length) { importError.textContent = 'No data rows found.'; return; }
+      pendingRows = rows;
+      headers = header;
+      buildMapper();
+    }
+
+    const fields = [
+      { key: 'day', label: 'Day (or Date)', required: false },
+      { key: 'date', label: 'Date (optional)', required: false },
+      { key: 'start', label: 'StartTime', required: false },
+      { key: 'end', label: 'EndTime', required: false },
+      { key: 'place', label: 'PlaceName', required: true },
+      { key: 'address', label: 'Address', required: true },
+      { key: 'maps', label: 'MapsLink', required: false },
+      { key: 'notes', label: 'Notes', required: false },
+    ];
+
+    function buildMapper() {
+      mapSection.hidden = false;
+      mapGrid.innerHTML = '';
+      importError.textContent = '';
+      preview.textContent = 'Preview first row: ' + JSON.stringify(pendingRows[0]);
+
+      fields.forEach(f => {
+        const wrap = document.createElement('div');
+        wrap.className = 'field';
+        wrap.innerHTML = `<label>${f.label}${f.required ? ' *' : ''}</label>`;
+        const sel = document.createElement('select');
+        sel.dataset.key = f.key;
+        sel.innerHTML = '<option value="">-- none --</option>' + headers.map(h => `<option value="${h}">${h}</option>`).join('');
+        sel.value = guessColumn(f.key) || '';
+        wrap.appendChild(sel);
+        mapGrid.appendChild(wrap);
+      });
+    }
+
+    function guessColumn(key) {
+      const map = { day: ['day','date','ngay'], date: ['date'], start: ['start','time','begin'], end: ['end','finish'], place: ['place','location','spot','ten'], address: ['address','addr','dia'], maps: ['map','google'], notes: ['note','ghi'] };
+      const targets = map[key] || [];
+      const lower = headers.map(h => h.toLowerCase());
+      const found = targets.map(t => lower.indexOf(t)).find(i => i >= 0);
+      return found >= 0 ? headers[found] : '';
+    }
+
+    $('#confirmImport').onclick = () => {
+      importError.textContent = '';
+      const mapping = {};
+      $$('#mapGrid select').forEach(sel => mapping[sel.dataset.key] = sel.value);
+
+      if (!mapping.place || !mapping.address) {
+        importError.textContent = 'PlaceName and Address are required.';
+        return;
+      }
+
+      const transformed = buildItineraryFromRows(pendingRows, mapping);
+      if (!transformed.length) { importError.textContent = 'No valid rows after mapping.'; return; }
+      itinerary = transformed;
+      saveData();
+      activeDay = itinerary[0].id;
+      render();
+      importDialog.close();
+      mapSection.hidden = true;
+      alert('Import successful!');
+    };
+
+    function buildItineraryFromRows(rows, mapping) {
+      const items = rows.map(r => {
+        const place = r[mapping.place];
+        const address = r[mapping.address];
+        if (!place || !address) return null;
+        const obj = {
+          place: place.trim(),
+          address: address.trim(),
+          start: (r[mapping.start] || '').trim(),
+          end: (r[mapping.end] || '').trim(),
+          maps: (r[mapping.maps] || '').trim(),
+          notes: (r[mapping.notes] || '').trim(),
+        };
+        const dayVal = r[mapping.day] || '';
+        const dateVal = r[mapping.date] || '';
+        return { dayVal: dayVal.trim(), dateVal: dateVal.trim(), entry: obj };
+      }).filter(Boolean);
+
+      if (!items.length) return [];
+
+      // derive days
+      let dayGroups = new Map();
+      let orderedDates = [];
+
+      items.forEach((row, idx) => {
+        let key = row.dayVal || '';
+        if (!key && row.dateVal) {
+          key = row.dateVal;
+          orderedDates.push(row.dateVal);
+        }
+        if (!key) key = 'Day 1';
+        const id = 'day-' + key.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'day1';
+        if (!dayGroups.has(id)) dayGroups.set(id, { id, title: key || 'Day ' + (dayGroups.size+1), date: row.dateVal || '', entries: [] });
+        dayGroups.get(id).entries.push(row.entry);
+      });
+
+      // If no explicit day but dates exist, sort by date
+      const arr = Array.from(dayGroups.values());
+      arr.sort((a,b) => (a.date||'') > (b.date||'') ? 1 : -1);
+      arr.forEach((d, i) => { d.id = `day${i+1}`; d.title = d.title || `Day ${i+1}`; });
+      arr.forEach(d => d.entries.sort((a,b) => (a.start||'') > (b.start||'') ? 1 : -1));
+
+      // fill maps when missing
+      arr.forEach(d => d.entries.forEach(e => {
+        if (!e.maps) e.maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((e.place||'') + ' ' + (e.address||''))}`;
+      }));
+
+      return arr;
+    }
+
+    function parseCsv(text) {
+      const lines = [];
+      let cur = '', inQuotes = false;
+      const rows = [];
+      let row = [];
+      for (let i=0;i<text.length;i++) {
+        const c = text[i];
+        if (c === '"') {
+          if (inQuotes && text[i+1] === '"') { cur += '"'; i++; }
+          else inQuotes = !inQuotes;
+        } else if (c === ',' && !inQuotes) {
+          row.push(cur.trim()); cur='';
+        } else if ((c === '\n' || c === '\r') && !inQuotes) {
+          if (cur !== '' || row.length) { row.push(cur.trim()); rows.push(row); row=[]; cur=''; }
+        } else {
+          cur += c;
+        }
+      }
+      if (cur !== '' || row.length) { row.push(cur.trim()); rows.push(row); }
+      const header = rows.shift() || [];
+      const normalizedRows = rows.map(r => Object.fromEntries(header.map((h,i) => [h, r[i] || ''])));
+      return { header, rows: normalizedRows };
+    }
+
+    render();
   </script>
 </body>
 </html>
